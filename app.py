@@ -9,7 +9,11 @@ from pystray import Icon, Menu, MenuItem
 from PIL import Image, ImageDraw
 import sqlparse
 import requests
+from groq import Groq
+from dotenv import load_dotenv
 
+load_dotenv()
+client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 eel.init('web')
 
 def identify_context(text):
@@ -87,7 +91,7 @@ def format_sql(text: str):
 def log_clipboard_to_file(text: str = None):
     """Write clipboard text to a timestamped file and return the filename.
 
-    If `text` is None, the current clipboard contents will be used.
+    If text is None, the current clipboard contents will be used.
     """
     try:
         if not text:
@@ -109,7 +113,7 @@ def log_clipboard_to_file(text: str = None):
 
 
 @eel.expose
-def summarize_text(text: str, max_sentences: int = 3):
+def summarize_text(text: str, max_sentences: int = 5):
     """Return a very simple extractive summary: first `max_sentences` sentences.
 
     This is a lightweight summary function that splits on sentence-ending punctuation.
@@ -119,32 +123,74 @@ def summarize_text(text: str, max_sentences: int = 3):
     try:
         if not text:
             text = pyperclip.paste()
-        # Split into sentences (simple heuristic)
+            
+        # LLM Summary
+        try:
+            print("Using Groq LLM for text summary")
+            chat_completion = client.chat.completions.create(
+                messages=[
+                    {
+                        "role": "user",
+                        "content": f"Summarize the following text concisely in about {max_sentences} sentences:\n\n{text}",
+                    }
+                ],
+                model="llama-3.3-70b-versatile",
+            )
+            
+            summary_content = chat_completion.choices[0].message.content
+            if summary_content:
+                return {"status": "ok", "summary": summary_content.strip()}
+                
+        except Exception as llm_err:
+            print(f"Groq LLM failed, falling back: {llm_err}")
+
+        # Fallback normal summary
         sentences = re.split(r'(?<=[.!?])\s+', text.strip())
-        # Filter out empty sentences
         sentences = [s.strip() for s in sentences if s.strip()]
         summary = ' '.join(sentences[:max_sentences]).strip()
+        
         if not summary:
-            # fallback to a substring
             summary = text.strip()[:500]
+            
         return {"status": "ok", "summary": summary}
+        
     except Exception as e:
         return {"status": "error", "error": str(e)}
-
+    
 
 @eel.expose
-def summarize_url(url: str, max_sentences: int = 3):
+def summarize_url(url: str, max_sentences: int = 5):
     """Fetch a URL, extract readable text using BeautifulSoup, and summarize it using summarize_text
     """
     try:
         if not url:
             return {"status": "error", "error": "No URL provided"}
 
+        # LLM Summary
+        try:
+            print("Using Groq LLM for URL summary")
+            chat_completion = client.chat.completions.create(
+                messages=[
+                    {
+                        "role": "user",
+                        "content": f"Summarize the following url concisely in about {max_sentences} sentences:\n\n{url}",
+                    }
+                ],
+                model="llama-3.3-70b-versatile",
+            )
+            
+            summary_content = chat_completion.choices[0].message.content
+            if summary_content:
+                return {"status": "ok", "summary": summary_content.strip()}
+                
+        except Exception as llm_err:
+            print(f"Groq LLM failed, falling back: {llm_err}")
+
+        # Fallback
         resp = requests.get(url, timeout=10)
         resp.raise_for_status()
         html = resp.text
 
-        # Try to use BeautifulSoup if available for better extraction
         try:
             from bs4 import BeautifulSoup
             soup = BeautifulSoup(html, 'html.parser')
