@@ -6,30 +6,61 @@ async function formatSQL() {
         // Copy formatted SQL back to clipboard for easy use
         if (navigator.clipboard && formatted) {
             await navigator.clipboard.writeText(formatted);
-            alert('Formatted SQL copied to clipboard.');
+            Swal.fire({
+                title: 'Formatted',
+                text: 'Formatted SQL copied to clipboard.',
+                icon: 'success',
+                confirmButtonColor: '#3d5afe'
+            });
         } else {
-            // Fallback: show in alert (may truncate)
-            alert(formatted.substring(0, 1000));
+            // Fallback: show in Swal (may truncate)
+            Swal.fire({
+                title: 'Formatted SQL',
+                text: formatted.substring(0, 1000),
+                icon: 'info',
+                confirmButtonColor: '#3d5afe'
+            });
         }
     } catch (err) {
         console.error(err);
-        alert('Failed to format SQL: ' + err);
+        Swal.fire('Error', 'Failed to format SQL: ' + err, 'error');
     }
 }
 
 function decodeJWT() {
-    alert("JWT Decoding not implemented yet!");
+    Swal.fire('Info', 'JWT Decoding not implemented yet!', 'info');
 }
 
 async function cloneRepo() {
-    let data = await eel.get_clipboard_and_position()();
-    let repoUrl = data.content;
-    let command = `git clone ${repoUrl}`;
-    alert(`Command generated: ${command}`);
+    try {
+        let data = await eel.get_clipboard_and_position()();
+        let repoUrl = data.content;
+        let command = `git clone ${repoUrl}`;
+        if (navigator.clipboard) {
+            await navigator.clipboard.writeText(command);
+            Swal.fire({
+                title: 'Command Copied',
+                // html: `<pre style="text-align:left">${command}</pre>`,
+                text: 'The clone command has been copied to your clipboard.',
+                icon: 'success',
+                confirmButtonColor: '#3d5afe'
+            });
+        } else {
+            Swal.fire({
+                title: 'Command Generated',
+                html: `<pre style="text-align:left">${command}</pre>`,
+                icon: 'info',
+                confirmButtonColor: '#3d5afe'
+            });
+        }
+    } catch (err) {
+        console.error(err);
+        Swal.fire('Error', 'Failed to generate clone command: ' + err, 'error');
+    }
 }
 
 function openURL() {
-    alert("Opening URL...");
+    Swal.fire({title: 'Opening URL', showConfirmButton: false, timer: 1000});
 }
 
 async function openPlayground() {
@@ -46,16 +77,21 @@ async function openPlayground() {
         // Open Programiz Python IDE in a new tab
         const win = window.open('https://programiz.pro/ide/python', '_blank');
         if (!win) {
-            alert('Popup blocked. Please allow popups for this application to open the playground.');
+            Swal.fire('Popup blocked', 'Please allow popups for this application to open the playground.', 'warning');
             return;
         }
 
         // Cannot programmatically write into a cross-origin page, so copy to clipboard
         // and instruct the user to paste into the editor.
-        alert('Opened Programiz IDE. Your code is copied to the clipboard — paste it into the editor (Cmd/Ctrl+V).');
+        Swal.fire({
+            title: 'Playground Opened',
+            text: 'Your code is copied to the clipboard — paste it into the editor (Cmd/Ctrl+V).',
+            icon: 'success',
+            confirmButtonColor: '#3d5afe'
+        });
     } catch (err) {
         console.error(err);
-        alert('Failed to open playground: ' + err);
+        Swal.fire('Error', 'Failed to open playground: ' + err, 'error');
     }
 }
 
@@ -67,14 +103,19 @@ function logData() {
 
             let res = await eel.log_clipboard_to_file(content)();
             if (res && res.status === 'ok') {
-                alert('Clipboard logged\nFile: ' + res.filename + '\nFolder: ' + res.foldername);
+                Swal.fire({
+                    title: 'Logged',
+                    html: `File: <strong>${res.filename}</strong><br>Path: <code>${res.path}</code>`,
+                    icon: 'success',
+                    confirmButtonColor: '#3d5afe'
+                });
             } else {
                 console.error(res);
-                alert('Failed to log clipboard: ' + (res && res.error ? res.error : 'unknown'));
+                Swal.fire('Error', 'Failed to log clipboard: ' + (res && res.error ? res.error : 'unknown'), 'error');
             }
         } catch (err) {
             console.error(err);
-            alert('Error logging clipboard: ' + err);
+            Swal.fire('Error', 'Error logging clipboard: ' + err, 'error');
         }
     })();
 }
@@ -85,14 +126,17 @@ async function summarizeData() {
         let content = data.content || '';
         let res = await eel.summarize_text(content, 3)();
         if (res && res.status === 'ok') {
-            alert('Summary:\n' + res.summary);
+            Swal.fire({
+                title: 'Text Summary',
+                text: res.summary,
+                icon: 'info',
+                confirmButtonColor: '#3d5afe'
+            });
         } else {
-            console.error(res);
-            alert('Failed to summarize: ' + (res && res.error ? res.error : 'unknown'));
+            Swal.fire('Error', res.error || 'unknown', 'error');
         }
     } catch (err) {
-        console.error(err);
-        alert('Error summarizing clipboard: ' + err);
+        Swal.fire('Error', 'Error summarizing clipboard: ' + err, 'error');
     }
 }
 
@@ -101,19 +145,23 @@ async function summarizeURL() {
         let data = await eel.get_clipboard_and_position()();
         let url = data.content || '';
         if (!url) {
-            alert('No URL found in clipboard.');
+            Swal.fire('No URL', 'No URL found in clipboard.', 'warning');
             return;
         }
         let res = await eel.summarize_url(url, 3)();
         if (res && res.status === 'ok') {
-            alert('URL Summary:\n' + res.summary);
+            // Replaces: alert('URL Summary:\n' + res.summary);
+            Swal.fire({
+                title: 'URL Summary',
+                text: res.summary,
+                icon: 'success',
+                confirmButtonColor: '#3d5afe'
+            });
         } else {
-            console.error(res);
-            alert('Failed to summarize URL: ' + (res && res.error ? res.error : 'unknown'));
+            Swal.fire('Error', res.error || 'unknown', 'error');
         }
     } catch (err) {
-        console.error(err);
-        alert('Error summarizing URL: ' + err);
+        Swal.fire('Error', 'Error summarizing URL: ' + err, 'error');
     }
 }
 

@@ -45,12 +45,12 @@ def identify_context(text):
     if re.match(jwt_pattern, text):
         return "JWT Token"
 
-    # 5. IP Address (IPv4)
-    ip_pattern = r"^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$"
-    if re.match(ip_pattern, text):
-        return "IP Address"
+    # # 5. IP Address (IPv4)
+    # ip_pattern = r"^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$"
+    # if re.match(ip_pattern, text):
+    #     return "IP Address"
 
-    # 6. GitHub Repo
+    # 6. GitHub Repo first then URL
     github_pattern = r"^https?://github\.com/[\w-]+/[\w.-]+/?$"
     if re.match(github_pattern, text):
         return "GitHub Repo"
@@ -73,7 +73,15 @@ def get_clipboard_and_position():
 
 def run_eel():
     # Eel runs in this background thread
-    eel.start('main.html', size=(300, 200), port=8080)
+    # Use the full screen height for the Eel window while keeping a narrow width
+    try:
+        screen_w, screen_h = pyautogui.size()
+    except Exception:
+        # Fallback if pyautogui cannot detect size
+        screen_w, screen_h = (300, 200)
+    width = 300
+    height = screen_h
+    eel.start('main.html', size=(width, height), port=8080)
 
 
 @eel.expose
