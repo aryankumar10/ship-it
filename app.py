@@ -1,16 +1,16 @@
 import os
-import eel
+import eel # type: ignore
 import re
 import time
-import pyperclip
-import pyautogui
+import pyperclip # type: ignore
+import pyautogui # type: ignore
 import threading
-from pystray import Icon, Menu, MenuItem
+from pystray import Icon, Menu, MenuItem # type: ignore
 from PIL import Image, ImageDraw
-import sqlparse
+import sqlparse # type: ignore
 import requests
-from groq import Groq
-from dotenv import load_dotenv
+from groq import Groq # type: ignore
+from dotenv import load_dotenv # type: ignore
 
 load_dotenv()
 client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
@@ -30,20 +30,20 @@ def identify_context(text):
     if re.match(sql_pattern, text, re.IGNORECASE | re.DOTALL):
         return "SQL Query"
 
-    # 2. Jira ID (e.g., PROJ-123)
-    jira_pattern = r"^[A-Z]{2,10}-\d+$"
-    if re.match(jira_pattern, text):
-        return "Jira Ticket"
+    # # 2. Jira ID (e.g., PROJ-123)
+    # jira_pattern = r"^[A-Z]{2,10}-\d+$"
+    # if re.match(jira_pattern, text):
+    #     return "Jira Ticket"
 
     # 3. Python Code (Check for common syntax patterns)
     python_pattern = r"(def\s+\w+\(|if\s+__name__\s+==\s+['\"]__main__['\"]|import\s+\w+|print\(.*\))"
     if re.search(python_pattern, text):
         return "Python Code"
 
-    # 4. JWT
-    jwt_pattern = r"^eyJ[A-Za-z0-9-_=]+\.[A-Za-z0-9-_=]+\.?[A-Za-z0-9-_.+/=]*$"
-    if re.match(jwt_pattern, text):
-        return "JWT Token"
+    # # 4. JWT
+    # jwt_pattern = r"^eyJ[A-Za-z0-9-_=]+\.[A-Za-z0-9-_=]+\.?[A-Za-z0-9-_.+/=]*$"
+    # if re.match(jwt_pattern, text):
+    #     return "JWT Token"
 
     # # 5. IP Address (IPv4)
     # ip_pattern = r"^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$"
@@ -200,7 +200,7 @@ def summarize_url(url: str, max_sentences: int = 5):
         html = resp.text
 
         try:
-            from bs4 import BeautifulSoup
+            from bs4 import BeautifulSoup # type: ignore
             soup = BeautifulSoup(html, 'html.parser')
             # Prefer paragraph text
             paragraphs = soup.find_all('p')

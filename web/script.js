@@ -13,7 +13,6 @@ async function formatSQL() {
                 confirmButtonColor: '#3d5afe'
             });
         } else {
-            // Fallback: show in Swal (may truncate)
             Swal.fire({
                 title: 'Formatted SQL',
                 text: formatted.substring(0, 1000),
@@ -59,30 +58,146 @@ async function cloneRepo() {
     }
 }
 
+function parseGitHubRepo(url) {
+    try {
+        // Accept URLs like https://github.com/owner/repo or git@github.com:owner/repo.git
+        if (!url) return null;
+        url = url.trim();
+        let ownerRepo = null;
+        const httpMatch = url.match(/github\.com\/([^\/\s]+)\/([^\/\s]+)(?:\/|$)/i);
+        if (httpMatch) {
+            ownerRepo = `${httpMatch[1]}/${httpMatch[2].replace(/\.git$/, '')}`;
+        } else {
+            const sshMatch = url.match(/git@github\.com:([^\/\s]+)\/([^\/\s]+)(?:\.git)?/i);
+            if (sshMatch) ownerRepo = `${sshMatch[1]}/${sshMatch[2].replace(/\.git$/, '')}`;
+        }
+        return ownerRepo;
+    } catch (e) {
+        return null;
+    }
+}
+
+async function forkRepo() {
+    try {
+        let data = await eel.get_clipboard_and_position()();
+        let url = data.content;
+        let ownerRepo = parseGitHubRepo(url);
+        if (!ownerRepo) {
+            Swal.fire('Error', 'Could not parse GitHub repo from URL', 'error');
+            return;
+        }
+        const cmd = `gh repo fork ${ownerRepo}`;
+        if (navigator.clipboard) {
+            await navigator.clipboard.writeText(cmd);
+            Swal.fire({
+                title: 'Command Copied',
+                text: 'The fork command has been copied to your clipboard.',
+                icon: 'success',
+                confirmButtonColor: '#3d5afe'
+            });
+        } else {
+            Swal.fire({title:'Fork command', html:`<pre>${cmd}</pre>`});
+        }
+    } catch (err) {
+        console.error(err);
+        Swal.fire('Error', 'Failed to generate fork command: ' + err, 'error');
+    }
+}
+
+async function forkAndCloneRepo() {
+    try {
+        let data = await eel.get_clipboard_and_position()();
+        let url = data.content;
+        let ownerRepo = parseGitHubRepo(url);
+        if (!ownerRepo) {
+            Swal.fire('Error', 'Could not parse GitHub repo from URL', 'error');
+            return;
+        }
+        const cmd = `gh repo fork ${ownerRepo} --clone=true`;
+        if (navigator.clipboard) {
+            await navigator.clipboard.writeText(cmd);
+            Swal.fire({
+                title: 'Command Copied',
+                text: 'The fork+clone command has been copied to your clipboard.',
+                icon: 'success',
+                confirmButtonColor: '#3d5afe'
+            });
+        } else {
+            Swal.fire({title:'Fork+Clone command', html:`<pre>${cmd}</pre>`});
+        }
+    } catch (err) {
+        console.error(err);
+        Swal.fire('Error', 'Failed to generate fork+clone command: ' + err, 'error');
+    }
+}
+
+async function createIssue() {
+    try {
+        let data = await eel.get_clipboard_and_position()();
+        let url = data.content;
+        let ownerRepo = parseGitHubRepo(url);
+        if (!ownerRepo) {
+            Swal.fire('Error', 'Could not parse GitHub repo from URL', 'error');
+            return;
+        }
+        const cmd = `gh issue create --repo ${ownerRepo} --title "<TITLE>" --body "<BODY>"`;
+        if (navigator.clipboard) {
+            await navigator.clipboard.writeText(cmd);
+            Swal.fire({
+                title: 'Command Copied',
+                text: 'The create-issue command has been copied to your clipboard.',
+                icon: 'success',
+                confirmButtonColor: '#3d5afe'
+            });
+        } else {
+            Swal.fire({title:'Create Issue command', html:`<pre>${cmd}</pre>`});
+        }
+    } catch (err) {
+        console.error(err);
+        Swal.fire('Error', 'Failed to generate create-issue command: ' + err, 'error');
+    }
+}
+
+async function openGitHubRepo() {
+    try {
+        let data = await eel.get_clipboard_and_position()();
+        let url = data.content;
+        if (!url) {
+            Swal.fire('No URL', 'No URL found in clipboard.', 'warning');
+            return;
+        }
+        const win = window.open(url, '_blank');
+        if (!win) {
+            Swal.fire('Popup blocked', 'Please allow popups for this application to open the repo.', 'warning');
+            return;
+        }
+        Swal.fire({toast:true, position:'top-end', icon:'info', title:'Opened repository', showConfirmButton:false, timer:1200});
+    } catch (err) {
+        console.error(err);
+        Swal.fire('Error', 'Failed to open repo: ' + err, 'error');
+    }
+}
+
 function openURL() {
     Swal.fire({title: 'Opening URL', showConfirmButton: false, timer: 1000});
 }
 
 async function openPlayground() {
     try {
-        // Fetch clipboard content so we can copy it into the user's clipboard
         let data = await eel.get_clipboard_and_position()();
         let content = data.content || '';
 
-        // Copy code to clipboard so user can paste into the playground
         if (navigator.clipboard && content) {
             await navigator.clipboard.writeText(content);
         }
 
-        // Open Programiz Python IDE in a new tab
         const win = window.open('https://programiz.pro/ide/python', '_blank');
         if (!win) {
             Swal.fire('Popup blocked', 'Please allow popups for this application to open the playground.', 'warning');
             return;
         }
 
-        // Cannot programmatically write into a cross-origin page, so copy to clipboard
-        // and instruct the user to paste into the editor.
+        // instruct user to paste into editor
         Swal.fire({
             title: 'Playground Opened',
             text: 'Your code is copied to the clipboard — paste it into the editor (Cmd/Ctrl+V).',
@@ -150,7 +265,6 @@ async function summarizeURL() {
         }
         let res = await eel.summarize_url(url, 3)();
         if (res && res.status === 'ok') {
-            // Replaces: alert('URL Summary:\n' + res.summary);
             Swal.fire({
                 title: 'URL Summary',
                 text: res.summary,
@@ -165,7 +279,7 @@ async function summarizeURL() {
     }
 }
 
-// JS Function to inject buttons based on type
+// Function to inject buttons based on type
 async function refresh() {
     let data = await eel.get_clipboard_and_position()();
     
@@ -182,7 +296,15 @@ async function refresh() {
         } else if (data.context === "JWT Token") {
             actionDiv.innerHTML = '<button onclick="decodeJWT()">Decode Payload</button>';
         } else if (data.context === "GitHub Repo") {
-            actionDiv.innerHTML = '<button onclick="cloneRepo()">Clone Repo</button>';
+            // multiple GitHub actions
+            actionDiv.innerHTML = `
+                <div style="display:flex;flex-direction:column;gap:6px">
+                    <button onclick="cloneRepo()">Clone</button>
+                    <button onclick="forkRepo()">Fork (gh)</button>
+                    <button onclick="forkAndCloneRepo()">Fork+Clone</button>
+                    <button onclick="createIssue()">Create Issue (cmd)</button>
+                    <button onclick="openGitHubRepo()">Open</button>
+                </div>`;
         } else if (data.context === "URL") {
             actionDiv.innerHTML = '<button onclick="openURL()">Open URL</button> <button onclick="summarizeURL()">Summarize URL</button>';
         } else {
@@ -191,7 +313,6 @@ async function refresh() {
             } else {
                 document.getElementById('context-type').innerText = "Plain Text";
                 document.getElementById('content-preview').innerText = data.content.substring(0, 50) + "...";
-                // still show Log Data and Generate Summary buttons so users can manually log or generate a summary
                 document.getElementById('actions').innerHTML = '<button onclick="logData()">Log Data</button> <button onclick="summarizeData()">Generate Summary</button>';
             }
 }
