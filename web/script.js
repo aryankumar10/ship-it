@@ -279,10 +279,43 @@ async function summarizeURL() {
     }
 }
 
+async function restoreHistoryItem(text) {
+    try {
+        if (navigator.clipboard) {
+            await navigator.clipboard.writeText(text);
+            // The main loop will pick this up as a new copy and move it to top
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'success',
+                title: 'Copied to clipboard',
+                showConfirmButton: false,
+                timer: 1000
+            });
+        }
+    } catch (err) {
+        console.error(err);
+    }
+}
+
 // Function to inject buttons based on type
 async function refresh() {
     let data = await eel.get_clipboard_and_position()();
     
+    // Render History
+    const historyList = document.getElementById('history-list');
+    if (data.history && historyList) {
+        // Simple re-render strategy
+        historyList.innerHTML = '';
+        data.history.forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'history-item';
+            div.innerText = item;
+            div.onclick = () => restoreHistoryItem(item);
+            div.title = "Click to copy";
+            historyList.appendChild(div);
+        });
+    }
 
     if (data.context !== "Plain Text") {
         document.getElementById('context-type').innerText = data.context;

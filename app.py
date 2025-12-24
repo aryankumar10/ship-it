@@ -16,6 +16,10 @@ load_dotenv()
 client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 eel.init('web')
 
+# Global clipboard history
+clipboard_history = []
+MAX_HISTORY = 10
+
 def identify_context(text):
     """
     Returns the type of copied text
@@ -65,15 +69,23 @@ def identify_context(text):
 
 @eel.expose
 def get_clipboard_and_position():
+    global clipboard_history
+    content = pyperclip.paste()
+    
+    # Update history if content is new and not empty
+    if content and (not clipboard_history or clipboard_history[0] != content):
+        clipboard_history.insert(0, content)
+        if len(clipboard_history) > MAX_HISTORY:
+            clipboard_history.pop()
+            
     return {
-        "content": pyperclip.paste(),
-        "context": identify_context(pyperclip.paste()),
-        "pos": pyautogui.position()
+        "content": content,
+        "context": identify_context(content),
+        "pos": pyautogui.position(),
+        "history": clipboard_history
     }
 
 def run_eel():
-    # Eel runs in this background thread
-    # Use the full screen height for the Eel window while keeping a narrow width
     try:
         screen_w, screen_h = pyautogui.size()
     except Exception:
@@ -126,7 +138,7 @@ def summarize_text(text: str, max_sentences: int = 5):
 
     This is a lightweight summary function that splits on sentence-ending punctuation.
     
-    TODO: implement LLM summary
+    TODO: implement LLM summary done
     """
     try:
         if not text:
@@ -202,7 +214,7 @@ def summarize_url(url: str, max_sentences: int = 5):
         try:
             from bs4 import BeautifulSoup # type: ignore
             soup = BeautifulSoup(html, 'html.parser')
-            # Prefer paragraph text
+            # paragraph text
             paragraphs = soup.find_all('p')
             if paragraphs:
                 text = '\n'.join(p.get_text(separator=' ', strip=True) for p in paragraphs)
@@ -218,11 +230,10 @@ def summarize_url(url: str, max_sentences: int = 5):
 
 def create_tray_icon():
     # Create the icon image
-    img = Image.new('RGB', (64, 64), color=(61, 90, 254))
+    img = Image.new('RGB', (64, 64), color=(128, 254, 128))
     d = ImageDraw.Draw(img)
-    d.text((20, 20), "SC", fill=(255, 255, 255))
+    # d.text((20, 20), "SC", fill=(255, 255, 255))
     
-    # Define the Tray Menu
     def on_quit(icon):
         icon.stop()
         os._exit(0) # Force quit the whole app including Eel
@@ -236,7 +247,6 @@ def create_tray_icon():
     eel_thread = threading.Thread(target=run_eel, daemon=True)
     eel_thread.start()
 
-    # 5. Run the Tray Icon on the MAIN thread (blocking)
     icon.run()
 
 if __name__ == "__main__":
